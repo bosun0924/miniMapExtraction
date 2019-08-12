@@ -24,57 +24,70 @@ def finding_minimap(image, lines, corner = 'right'):
     #get the hight,lenth of the image.
     y, x, c = image.shape
     #initialize the boudary coordinates(outside of the image)
-    ver_boudary = x
-    ver_boudary_left = 0
+    ver_boudary_a = int(0.96*x)
+    ver_boudary_c = int(0.96*x)
+    ver_boudary_a_left = int(0.04*x)
+    ver_boudary_c_left = int(0.04*x)
+    hor_boudary_b = int(y*0.96)
+    hor_boudary_d = int(y*0.96)
     mapcentre_x = x
-    hor_boudary = y
     mapcentre_y = y
     map = np.zeros_like(image)
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line.reshape(4)
             #get verdical/horizontal lines in the mini map
-
+            xmin=min(x1,x2)
+            xmax=max(x1,x2)
+            ymin=min(y1,y2)
+            ymax=max(y1,y2)
             #right corner
             if corner == 'right':
                 if (abs(x1-x2)<3):#verdical boudary
-                    xmin=min(x1,x2)
-                    if (xmin<ver_boudary):
-                        ver_boudary=xmin
-                        mapcentre_x = int((xmin+x)/2)
+                    if (xmax<ver_boudary_a):
+                        ver_boudary_a=xmin
+                    elif (xmin>ver_boudary_c):
+                        ver_boudary_c=xmax
                 if (abs(y1-y2)<3):#horizontal boudary
-                    ymin=min(y1,y2)
-                    if (ymin<hor_boudary):
-                        hor_boudary=ymin
-                        mapcentre_y = int((ymin+y)/2)
+                    if (ymax<hor_boudary_b):
+                        hor_boudary_b=ymin
+                    elif (ymin>hor_boudary_d):
+                        hor_boudary_d=ymax       
             #left coner
             if corner == 'left':
                 if (abs(x1-x2)<3):#verdical boudary
-                    xmax=max(x1,x2)
-                    if (xmax>ver_boudary_left):
-                        ver_boudary_left=xmax
-                        mapcentre_x = int((xmax)/2)
+                    if (xmin>ver_boudary_a_left):
+                        ver_boudary_a_left=xmax
+                    elif (xmax<ver_boudary_c):
+                        ver_boudary_c_left=xmin
                 if (abs(y1-y2)<3):#horizontal boudary
-                    ymin=min(y1,y2)
-                    if (ymin<hor_boudary):
-                        hor_boudary=ymin
-                        mapcentre_y = int((ymin+y)/2)
+                    if (ymax<hor_boudary_b):
+                        hor_boudary_b=ymin
+                    if (ymin>hor_boudary_d):
+                        hor_boudary_d=ymax
+
     #display the boudaries on the map
     if (corner == 'right') :
         #horizontal
-        cv2.line(map, (ver_boudary, hor_boudary), (x, hor_boudary), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a, hor_boudary_b), (ver_boudary_c, hor_boudary_b), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a, hor_boudary_d), (ver_boudary_c, hor_boudary_d), (0, 255, 0), 3)
         #verdical
-        cv2.line(map, (ver_boudary, hor_boudary), (ver_boudary, y), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a, hor_boudary_b), (ver_boudary_a, hor_boudary_d), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_c, hor_boudary_b), (ver_boudary_c, hor_boudary_d), (0, 255, 0), 3)
     if (corner == 'left') :
         #horizontal
-        cv2.line(map, (ver_boudary_left, hor_boudary), (0, hor_boudary), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a_left, hor_boudary_b), (ver_boudary_c_left, hor_boudary_b), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a_left, hor_boudary_d), (ver_boudary_c_left, hor_boudary_d), (0, 255, 0), 3)
         #verdical
-        cv2.line(map, (ver_boudary_left, hor_boudary), (ver_boudary_left, y), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_a_left, hor_boudary_b), (ver_boudary_a_left, hor_boudary_d), (0, 255, 0), 3)
+        cv2.line(map, (ver_boudary_c_left, hor_boudary_b), (ver_boudary_c_left, hor_boudary_d), (0, 255, 0), 3)
     
     #display the centre of the map
+    mapcentre_x = int((ver_boudary_a+ver_boudary_c)/2) if corner == 'right' else int((ver_boudary_a_left+ver_boudary_c_left)/2)
+    mapcentre_y = int((hor_boudary_b+hor_boudary_d)/2)
     centre=(mapcentre_x,mapcentre_y)
     print(centre)
-    cv2.circle(map, centre, 5, (0,255,255), -2)
+    cv2.circle(map, centre, 15, (0,255,255), -2)
     return map
 
 def display_lines(image, lines):
@@ -85,8 +98,8 @@ def display_lines(image, lines):
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
     return line_image
 
-#'''
-cap = cv2.VideoCapture("leftmap.mp4")
+'''
+cap = cv2.VideoCapture("test2.mp4")
 #cap = cv2.VideoCapture("./testImage/Youtube_gameplay.mp4")
 thr = 64
 max_val = 255
@@ -104,7 +117,7 @@ while(cap.isOpened()):
     threshold = 120
     lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=50, maxLineGap=0)
     #line_image = display_lines(frame, lines)
-    map_info = finding_minimap(frame, lines, 'left')
+    map_info = finding_minimap(frame, lines, 'right')
     combo_image = cv2.addWeighted(frame, 0.8, map_info, 1, 1)
     cv2.imshow("Image", combo_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -154,4 +167,4 @@ plt.figure()
 plt.imshow(combo_image)
 
 plt.show()
-'''
+#'''
