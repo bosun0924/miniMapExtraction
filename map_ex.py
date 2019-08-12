@@ -43,24 +43,24 @@ def finding_minimap(image, lines, corner = 'right'):
             ymax=max(y1,y2)
             #right corner
             if corner == 'right':
-                if (abs(x1-x2)<3):#verdical boudary
+                if (abs(x1-x2)<5):#verdical boudary
                     if (xmax<ver_boudary_a):
                         ver_boudary_a=xmin
                     elif (xmin>ver_boudary_c):
                         ver_boudary_c=xmax
-                if (abs(y1-y2)<3):#horizontal boudary
+                if (abs(y1-y2)<5):#horizontal boudary
                     if (ymax<hor_boudary_b):
                         hor_boudary_b=ymin
                     elif (ymin>hor_boudary_d):
                         hor_boudary_d=ymax       
             #left coner
             if corner == 'left':
-                if (abs(x1-x2)<3):#verdical boudary
+                if (abs(x1-x2)<5):#verdical boudary
                     if (xmin>ver_boudary_a_left):
                         ver_boudary_a_left=xmax
-                    elif (xmax<ver_boudary_c):
+                    elif (xmax<ver_boudary_c_left):
                         ver_boudary_c_left=xmin
-                if (abs(y1-y2)<3):#horizontal boudary
+                if (abs(y1-y2)<5):#horizontal boudary
                     if (ymax<hor_boudary_b):
                         hor_boudary_b=ymin
                     if (ymin>hor_boudary_d):
@@ -98,26 +98,38 @@ def display_lines(image, lines):
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
     return line_image
 
+class miniMap():
+    def __init__(self,a,b,c,d):
+        self.a = a
+        self.b = b
+        self.c = c
+        self.d = d
+    
+    def get_centre():
+        return (int((a+c)/2),int((b+d)/2))
+
+
 #'''
 cap = cv2.VideoCapture("test2.mp4")
-#cap = cv2.VideoCapture("./testImage/Youtube_gameplay.mp4")
-thr = 64
+dark = 4
+thr = 18
 max_val = 255
+map_stack = [None]
 
 while(cap.isOpened()):
     _, frame = cap.read()
     frame = cv2.resize(frame, (1280, 720))
     gray_image = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    #Thresholding to get map edges highlighted
     ret, o5 = cv2.threshold(gray_image, thr, max_val, cv2.THRESH_TRUNC)
-    #ret, o5 = cv2.threshold(gray_image, 16, 255, cv2.THRESH_TOZERO)
-    ret, o6 = cv2.threshold(o5, 4, 64, cv2.THRESH_BINARY_INV)
+    ret, o6 = cv2.threshold(o5, dark, thr, cv2.THRESH_BINARY_INV)
     TRUNC_REGION = region_of_interest(o6)
     rho = 2
     theta = np.pi/180
-    threshold = 120
-    lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=50, maxLineGap=0)
+    threshold = 100
+    lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=30, maxLineGap=6)
     #line_image = display_lines(frame, lines)
-    map_info = finding_minimap(frame, lines, 'right')
+    map_info = finding_minimap(frame, lines, 'left')
     combo_image = cv2.addWeighted(frame, 0.8, map_info, 1, 1)
     cv2.imshow("Image", combo_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -128,7 +140,7 @@ cv2.destroyAllWindows()
 
 '''
 
-image = cv2.imread("l2.jpg")
+image = cv2.imread("l5.png")
 gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 dark = 4
 thr = 18
@@ -143,7 +155,7 @@ rho = 2
 theta = np.pi/180
 threshold = 80
 #Hough Transformation
-lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=70, maxLineGap=6)
+lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=50, maxLineGap=6)
 #Get the lines
 map_info = finding_minimap(image, lines, 'left')
 hough = display_lines(image, lines)
