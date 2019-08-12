@@ -98,7 +98,7 @@ def display_lines(image, lines):
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
     return line_image
 
-'''
+#'''
 cap = cv2.VideoCapture("test2.mp4")
 #cap = cv2.VideoCapture("./testImage/Youtube_gameplay.mp4")
 thr = 64
@@ -128,7 +128,7 @@ cv2.destroyAllWindows()
 
 '''
 
-image = cv2.imread("l1.png")
+image = cv2.imread("l2.jpg")
 gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 dark = 4
 thr = 18
@@ -167,4 +167,4 @@ plt.figure()
 plt.imshow(combo_image)
 
 plt.show()
-#'''
+'''
