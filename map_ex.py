@@ -65,7 +65,7 @@ def finding_minimap(image, lines, corner = 'right'):
                         hor_boudary_b=ymin
                     if (ymin>hor_boudary_d):
                         hor_boudary_d=ymax
-
+    '''
     #display the boudaries on the map
     if (corner == 'right') :
         #horizontal
@@ -89,6 +89,12 @@ def finding_minimap(image, lines, corner = 'right'):
     print(centre)
     cv2.circle(map, centre, 15, (0,255,255), -2)
     return map
+    '''
+    if corner == 'right':
+        map_co = [ver_boudary_a,hor_boudary_b,ver_boudary_c,hor_boudary_d]
+    if corner == 'left':
+        map_co = [ver_boudary_a_left,hor_boudary_b,ver_boudary_c_left,hor_boudary_d]
+    return map_co
 
 def display_lines(image, lines):
     line_image = np.zeros_like(image)
@@ -98,6 +104,21 @@ def display_lines(image, lines):
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
     return line_image
 
+def capture_map(cap):
+    _, frame = cap.read()
+    frame = cv2.resize(frame, (1280, 720))
+    gray_image = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    #Thresholding to get map edges highlighted
+    ret, o6 = cv2.threshold(gray_image, dark, thr, cv2.THRESH_BINARY_INV)
+    map_region = region_of_interest(o6)
+    #set up hough transformation
+    rho = 2
+    theta = np.pi/180
+    threshold = 100
+    lines = cv2.HoughLinesP(map_region,rho, theta, threshold, np.array ([]), minLineLength=30, maxLineGap=6)
+    map_info = finding_minimap(frame, lines, 'left')
+    return map_info
+
 class miniMap():
     def __init__(self,a,b,c,d):
         self.a = a
@@ -105,31 +126,44 @@ class miniMap():
         self.c = c
         self.d = d
     
-    def get_centre():
+    def get_centre(self):
         return (int((a+c)/2),int((b+d)/2))
 
-
 #'''
-cap = cv2.VideoCapture("test2.mp4")
+cap = cv2.VideoCapture("leftmap.mp4")
 dark = 4
 thr = 18
 max_val = 255
-map_stack = [None]
+#'''
+map_coord_stack = np.empty((21,4), dtype = int)
+foundMap = False
+#initializing 
+while (foundMap == False):
+    for i in range(21):
+        map_coord_stack[i] = capture_map(cap)
+    a = map_coord_stack[:,0]
+    b = map_coord_stack[:,1]
+    c = map_coord_stack[:,2]
+    d = map_coord_stack[:,3]
+    print (map_coord_stack)
+    #getting the initial map coordinates
+    a = np.argmax(np.bincount(map_coord_stack[:,0]))
+    b = np.argmax(np.bincount(map_coord_stack[:,1]))
+    #b = map_coord_stack[np.argmax(map_coord_stack[:,1])][1]
+    c = np.argmax(np.bincount(map_coord_stack[:,2]))
+    d = np.argmax(np.bincount(map_coord_stack[:,3]))
+    map = miniMap(a,b,c,d)
+    map.get_centre()
+    if (map.get_centre()) != (51, 691):
+        foudnMap = True
+        break
+print ("Map Locating Completed")
+print (a,b,c,d)
+'''   
 
 while(cap.isOpened()):
     _, frame = cap.read()
-    frame = cv2.resize(frame, (1280, 720))
-    gray_image = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    #Thresholding to get map edges highlighted
-    ret, o5 = cv2.threshold(gray_image, thr, max_val, cv2.THRESH_TRUNC)
-    ret, o6 = cv2.threshold(o5, dark, thr, cv2.THRESH_BINARY_INV)
-    TRUNC_REGION = region_of_interest(o6)
-    rho = 2
-    theta = np.pi/180
-    threshold = 100
-    lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=30, maxLineGap=6)
-    #line_image = display_lines(frame, lines)
-    map_info = finding_minimap(frame, lines, 'left')
+    map_info = capture_map(cap)
     combo_image = cv2.addWeighted(frame, 0.8, map_info, 1, 1)
     cv2.imshow("Image", combo_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -137,7 +171,7 @@ while(cap.isOpened()):
 cap.release()
 cv2.destroyAllWindows()
 #cv2.threshold(image, threshold, max_val, algorithm)
-
+'''
 '''
 
 image = cv2.imread("l5.png")
