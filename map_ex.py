@@ -79,16 +79,6 @@ def finding_minimap(image, lines, corner = 'right'):
             if corner == 'left':
                 (a_left,c_left,b,d) = get_map_boundaries_left(x1,x2,y1,y2,a_left,c_left,b,d)
 
-    '''
-    
-    #display the centre of the map
-    mapcentre_x = int((ver_boudary_a+ver_boudary_c)/2) if corner == 'right' else int((ver_boudary_a_left+ver_boudary_c_left)/2)
-    mapcentre_y = int((b+d)/2)
-    centre=(mapcentre_x,mapcentre_y)
-    print(centre)
-    cv2.circle(map, centre, 15, (0,255,255), -2)
-    return map
-    '''
     if corner == 'right':
         map_co = [a,b,c,d]
     if corner == 'left':
@@ -136,9 +126,9 @@ class miniMap():
         self.d = d
     
     def get_centre(self):
-        return (int((a+c)/2),int((b+d)/2))
+        return [int((a+c)/2),int((b+d)/2)]
 #'''
-cap = cv2.VideoCapture("test2.mp4")
+cap = cv2.VideoCapture("test.mp4")
 dark = 4
 thr = 18
 max_val = 255
@@ -147,32 +137,36 @@ foundMap = False
 map_corner = 'right'
 k = 3
 #mini map location initializing 
-while (foundMap == False) or (k == 0):
+while (foundMap == False):
     for i in range(21):
         map_coord_stack[i] = capture_map(cap,map_corner)
     a = map_coord_stack[:,0]
     b = map_coord_stack[:,1]
     c = map_coord_stack[:,2]
     d = map_coord_stack[:,3]
-    print (map_coord_stack)
+    #print (map_coord_stack)
     #getting the initial map coordinates
     a = np.argmax(np.bincount(map_coord_stack[:,0]))
     b = np.argmax(np.bincount(map_coord_stack[:,1]))
     c = np.argmax(np.bincount(map_coord_stack[:,2]))
     d = np.argmax(np.bincount(map_coord_stack[:,3]))
     map = miniMap(a,b,c,d)
-    map.get_centre()
-    if (map.get_centre()) != ((51, 691) or (1223, 691)):
+    box_centre = map.get_centre()
+    print(box_centre)
+    if (map_corner=='right')and(box_centre[0]>1180)and(box_centre[0]<1220)and (box_centre[1]>600):
+        foudnMap = True
+        break
+    elif (map_corner=='left')and(box_centre[0]>70)and(box_centre[0]<100)and (box_centre[1]>600):
         foudnMap = True
         break
     else:
-        print('reinitiating minimap')
-        k = k-1
-print ("Map Locating Completed")
-print (a,b,c,d)
-  
+        map_corner = 'left' if (map_corner == 'right') else 'right'
+        map_coord_stack = np.empty((21,4), dtype = int)
+
 res = (1280, 720)
 while(cap.isOpened()):
+    print(map_corner)
+    print(a,b,c,d)
     _, frame = cap.read()
     frame = cv2.resize(frame, res)
     map_info = display_map(frame, a,b,c,d)
@@ -190,6 +184,14 @@ while(cap.isOpened()):
         #it means it is a legit resizing(instead of the influence of noise)
         if verd_hor_change_error <= 3:
             [a,b,c,d]=[a1,b1,c1,d1]
+    
+    frame_map = miniMap(a,b,c,d)
+    box_centre = frame_map.get_centre()
+    #check if the map location moved to the opposite corner
+    if (map_corner=='right')and(not((box_centre[0]>1180)and(box_centre[0]<1220)and(box_centre[1]>600))):
+        map_corner = 'left'
+    elif (map_corner=='left')and(not((box_centre[0]>70)and(box_centre[0]<100)and(box_centre[1]>600))):
+        map_corner = 'right'
     #press q to exit the video window
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
