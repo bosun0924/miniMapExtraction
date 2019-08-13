@@ -96,6 +96,17 @@ def finding_minimap(image, lines, corner = 'right'):
         map_co = [ver_boudary_a_left,hor_boudary_b,ver_boudary_c_left,hor_boudary_d]
     return map_co
 
+def display_map(image,a,b,c,d):
+    map = np.zeros_like(image)
+    #horizontal
+    cv2.line(map, (a, b), (c, b), (0, 255, 0), 3)
+    cv2.line(map, (a, d), (c, d), (0, 255, 0), 3)
+    #verdical
+    cv2.line(map, (a, b), (a, d), (0, 255, 0), 3)
+    cv2.line(map, (c, b), (c, d), (0, 255, 0), 3)
+    return map
+
+
 def display_lines(image, lines):
     line_image = np.zeros_like(image)
     if lines is not None:
@@ -137,7 +148,7 @@ max_val = 255
 #'''
 map_coord_stack = np.empty((21,4), dtype = int)
 foundMap = False
-#initializing 
+#mini map location initializing 
 while (foundMap == False):
     for i in range(21):
         map_coord_stack[i] = capture_map(cap)
@@ -149,31 +160,44 @@ while (foundMap == False):
     #getting the initial map coordinates
     a = np.argmax(np.bincount(map_coord_stack[:,0]))
     b = np.argmax(np.bincount(map_coord_stack[:,1]))
-    #b = map_coord_stack[np.argmax(map_coord_stack[:,1])][1]
     c = np.argmax(np.bincount(map_coord_stack[:,2]))
     d = np.argmax(np.bincount(map_coord_stack[:,3]))
     map = miniMap(a,b,c,d)
     map.get_centre()
-    if (map.get_centre()) != (51, 691):
+    if (map.get_centre()) != ((51, 691) or (1223, 691)):
         foudnMap = True
         break
 print ("Map Locating Completed")
 print (a,b,c,d)
-'''   
-
+  
+res = (1280, 720)
 while(cap.isOpened()):
     _, frame = cap.read()
-    map_info = capture_map(cap)
+    frame = cv2.resize(frame, res)
+    map_info = display_map(frame, a,b,c,d)
+    centre = [abs(a-c),abs(b-d)]
     combo_image = cv2.addWeighted(frame, 0.8, map_info, 1, 1)
     cv2.imshow("Image", combo_image)
+    ##########
+    #check if the map resized or moved to the other corner
+    (a1,b1,c1,d1) = capture_map(cap)#the return is a coordinate list
+    new_centre = [abs(a1-c1),abs(c1-d1)]
+    #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
+    if (abs(centre[0]-new_centre[0]) > 2) and (abs(centre[1]-new_centre[1]) > 2):
+        verd_hor_change_error = abs(centre[0]-new_centre[0])-abs(centre[1]-new_centre[1])
+        #if the verdical and horizontal change is about 45 degrees
+        #it means it is a legit resizing(instead of the influence of noise)
+        if verd_hor_change_error <=3:
+            [a,b,c,d]=[a1,b1,c1,d1]
+    #press q to exit the video window
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 cap.release()
 cv2.destroyAllWindows()
 #cv2.threshold(image, threshold, max_val, algorithm)
-'''
-'''
 
+
+'''
 image = cv2.imread("l5.png")
 gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 dark = 4
