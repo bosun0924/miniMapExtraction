@@ -105,7 +105,7 @@ def display_lines(image, lines):
 
 def capture_map(cap, corner = 'right'):
     _, frame = cap.read()
-    frame = cv2.resize(frame, (1280, 720))
+    frame = cv2.resize(frame, (1920, 1080))
     gray_image = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     #Thresholding to get map edges highlighted
     ret, o6 = cv2.threshold(gray_image, dark, thr, cv2.THRESH_BINARY_INV)
@@ -114,7 +114,7 @@ def capture_map(cap, corner = 'right'):
     rho = 2
     theta = np.pi/180
     threshold = 100
-    lines = cv2.HoughLinesP(map_region,rho, theta, threshold, np.array ([]), minLineLength=30, maxLineGap=6)
+    lines = cv2.HoughLinesP(map_region,rho, theta, threshold, np.array ([]), minLineLength=45, maxLineGap=8)
     map_info = finding_minimap(frame, lines, corner)
     return map_info
 
@@ -130,7 +130,6 @@ class miniMap():
 
     def get_boudaries(sefl):
         return [self.a, self.b, self.c, self.d]
-#'''
 
 def initial_detecting(cap,dark,thr,max_val,map_corner = 'right',foundMap = False,map_coord_stack = np.empty((55,4), dtype = int), k = 0):
     print("##############initializing#############")
@@ -152,28 +151,28 @@ def initial_detecting(cap,dark,thr,max_val,map_corner = 'right',foundMap = False
         minimap = miniMap(a,b,c,d)
         box_centre = minimap.get_centre()
         print(box_centre)
-        if (map_corner=='right')and(box_centre[0]>1180)and(box_centre[0]<1220)and (box_centre[1]>600):
+        if (map_corner=='right')and(box_centre[0]>1770)and(box_centre[0]<830)and (box_centre[1]>900):
             foudnMap = True
             break
-        elif (map_corner=='left')and(box_centre[0]>70)and(box_centre[0]<100)and (box_centre[1]>600):
+        elif (map_corner=='left')and(box_centre[0]>105)and(box_centre[0]<150)and (box_centre[1]>900):
             foudnMap = True
             break
         else:
             map_corner = 'left' if (map_corner == 'right') else 'right'
             map_coord_stack = np.empty((55,4), dtype = int)
-    print (a,b,c,d)
     return [a,b,c,d,map_corner]
 
 #initializing 
-cap = cv2.VideoCapture("final_test.mp4")
+cap = cv2.VideoCapture("left_to_right.mp4")
 dark = 4
 thr = 18
 max_val = 255
 map_corner = 'right'
 #Locate the minimap
 (a,b,c,d,map_corner) = initial_detecting(cap,dark,thr,max_val)
+print("map located")
 print(a,b,c,d)
-res = (1280, 720)
+res = (1920, 1080)
 #Track the minimap size/location changes
 while(cap.isOpened()):
     #print(map_corner)
@@ -181,18 +180,20 @@ while(cap.isOpened()):
     _, frame = cap.read()
     map_area = cv2.resize(frame, res)
     #printing out result
-    '''
+    #'''
     map_info = display_map(map_area, a,b,c,d)
     #Show the whold image with mini map in a box at the corner
     result_image = cv2.addWeighted(map_area, 0.8, map_info, 1, 1)
-    cv2.imshow("Image", result_image)
-    '''
+    cv2.imshow("Image", cv2.resize(result_image, (800,450)))
     #minimap cropping box
-    ver_l = min(a,c)
-    ver_r = max(a,c)
-    result_image = cv2.resize(map_area[b:d,ver_l:ver_r], (252,252))
-    cv2.imshow("mini map", result_image)
-    #'''
+    if (a==c)or(b==d):
+        result_image_map = np.zeros((252,252))
+    else:
+        ver_l = min(a,c)
+        ver_r = max(a,c)
+        result_image_map = cv2.resize(map_area[b:d,ver_l:ver_r], (252,252))
+    cv2.imshow("mini map", result_image_map)
+
     frame_map = miniMap(a,b,c,d)
     box_centre = frame_map.get_centre()
     #print(box_centre)
@@ -204,10 +205,10 @@ while(cap.isOpened()):
     dx = abs(box_centre[0]-new_centre[0])
     dy = abs(box_centre[1]-new_centre[1])
     if (map_corner=='right'):
-        if (new_centre[0]>1180)and(new_centre[0]<1220)and(box_centre[1]>600):
+        if (new_centre[0]>1770)and(new_centre[0]<1830)and(box_centre[1]>900):
         #image stabilization
         #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
-            if ((dx > 3) and (dy > 3)):
+            if ((dx > 4) and (dy > 4)):
                 [a,b,c,d]=[a1,b1,c1,d1]
         else:
             map_corner = 'left'
@@ -215,10 +216,10 @@ while(cap.isOpened()):
             (a,b,c,d) = capture_map(cap,map_corner)
 
     elif (map_corner=='left'):
-        if (new_centre[0]>70)and(new_centre[0]<100)and (new_centre[1]>600):
+        if (new_centre[0]>105)and(new_centre[0]<150)and (new_centre[1]>900):
             #image stabilization
             #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
-                if ((dx > 3) and (dy > 3)):
+                if ((dx > 4) and (dy > 4)):
                     [a,b,c,d]=[a1,b1,c1,d1]
         else:
             map_corner = 'right'
@@ -230,49 +231,4 @@ while(cap.isOpened()):
         break
 cap.release()
 cv2.destroyAllWindows()
-#cv2.threshold(image, threshold, max_val, algorithm)
 
-
-'''
-image = cv2.imread("l5.png")
-map_corner = 'left'
-gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-dark = 4
-thr = 18
-max_val = 255
-#Thresholding to get map edges highlighted
-ret, o5 = cv2.threshold(gray_image, thr, max_val, cv2.THRESH_TRUNC)
-ret, o6 = cv2.threshold(o5, dark, thr, cv2.THRESH_BINARY_INV)
-#Get the region of Interest
-TRUNC_REGION = region_of_interest(o6, map_corner)
-#set up hough transformation parameters
-rho = 2
-theta = np.pi/180
-threshold = 80
-#Hough Transformation
-lines = cv2.HoughLinesP(TRUNC_REGION,rho, theta, threshold, np.array ([]), minLineLength=50, maxLineGap=6)
-#Get the lines
-(a,b,c,d) = finding_minimap(image, lines, map_corner)
-map_info = display_map(image, a,b,c,d)
-hough = display_lines(image, lines)
-hough_image = cv2.addWeighted(image, 0.8, hough, 1, 1)
-combo_image = cv2.addWeighted(image, 0.8, map_info, 1, 1)
-#cv2.imshow("Image", combo_image)
-#cv2.waitKey(0)
-plt.figure()
-plt.imshow(o5)
-
-plt.figure()
-plt.imshow(o6)
-
-plt.figure()
-plt.imshow(TRUNC_REGION)
-
-plt.figure()
-plt.imshow(hough_image)
-
-plt.figure()
-plt.imshow(combo_image)
-
-plt.show()
-'''
