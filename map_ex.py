@@ -126,72 +126,105 @@ class miniMap():
         self.d = d
     
     def get_centre(self):
-        return [int((a+c)/2),int((b+d)/2)]
+        return [int((self.a+self.c)/2),int((self.b+self.d)/2)]
+
+    def get_boudaries(sefl):
+        return [self.a, self.b, self.c, self.d]
 #'''
-cap = cv2.VideoCapture("test.mp4")
+
+def initial_detecting(cap,dark,thr,max_val,map_corner = 'right',foundMap = False,map_coord_stack = np.empty((55,4), dtype = int), k = 0):
+    print("##############initializing#############")
+    while (foundMap==False):
+        for i in range(55):
+            map_coord_stack[i] = capture_map(cap,map_corner)
+        '''
+        a = map_coord_stack[:,0]
+        b = map_coord_stack[:,1]
+        c = map_coord_stack[:,2]
+        d = map_coord_stack[:,3]
+        '''
+        #print (map_coord_stack)
+        #getting the initial map coordinates
+        a = np.argmax(np.bincount(map_coord_stack[:,0]))
+        b = np.argmax(np.bincount(map_coord_stack[:,1]))
+        c = np.argmax(np.bincount(map_coord_stack[:,2]))
+        d = np.argmax(np.bincount(map_coord_stack[:,3]))
+        minimap = miniMap(a,b,c,d)
+        box_centre = minimap.get_centre()
+        print(box_centre)
+        if (map_corner=='right')and(box_centre[0]>1180)and(box_centre[0]<1220)and (box_centre[1]>600):
+            foudnMap = True
+            break
+        elif (map_corner=='left')and(box_centre[0]>70)and(box_centre[0]<100)and (box_centre[1]>600):
+            foudnMap = True
+            break
+        else:
+            map_corner = 'left' if (map_corner == 'right') else 'right'
+            map_coord_stack = np.empty((55,4), dtype = int)
+    print (a,b,c,d)
+    return [a,b,c,d,map_corner]
+
+#initializing 
+cap = cv2.VideoCapture("final_test.mp4")
 dark = 4
 thr = 18
 max_val = 255
-map_coord_stack = np.empty((21,4), dtype = int)
-foundMap = False
 map_corner = 'right'
-k = 3
-#mini map location initializing 
-while (foundMap == False):
-    for i in range(21):
-        map_coord_stack[i] = capture_map(cap,map_corner)
-    a = map_coord_stack[:,0]
-    b = map_coord_stack[:,1]
-    c = map_coord_stack[:,2]
-    d = map_coord_stack[:,3]
-    #print (map_coord_stack)
-    #getting the initial map coordinates
-    a = np.argmax(np.bincount(map_coord_stack[:,0]))
-    b = np.argmax(np.bincount(map_coord_stack[:,1]))
-    c = np.argmax(np.bincount(map_coord_stack[:,2]))
-    d = np.argmax(np.bincount(map_coord_stack[:,3]))
-    map = miniMap(a,b,c,d)
-    box_centre = map.get_centre()
-    print(box_centre)
-    if (map_corner=='right')and(box_centre[0]>1180)and(box_centre[0]<1220)and (box_centre[1]>600):
-        foudnMap = True
-        break
-    elif (map_corner=='left')and(box_centre[0]>70)and(box_centre[0]<100)and (box_centre[1]>600):
-        foudnMap = True
-        break
-    else:
-        map_corner = 'left' if (map_corner == 'right') else 'right'
-        map_coord_stack = np.empty((21,4), dtype = int)
-
+#Locate the minimap
+(a,b,c,d,map_corner) = initial_detecting(cap,dark,thr,max_val)
+print(a,b,c,d)
 res = (1280, 720)
+#Track the minimap size/location changes
 while(cap.isOpened()):
-    print(map_corner)
-    print(a,b,c,d)
+    #print(map_corner)
+    #print(a,b,c,d)
     _, frame = cap.read()
-    frame = cv2.resize(frame, res)
-    map_info = display_map(frame, a,b,c,d)
-    centre = [abs(a-c),abs(b-d)]
-    combo_image = cv2.addWeighted(frame, 0.8, map_info, 1, 1)
-    cv2.imshow("Image", combo_image)
+    map_area = cv2.resize(frame, res)
+    #printing out result
+    '''
+    map_info = display_map(map_area, a,b,c,d)
+    #Show the whold image with mini map in a box at the corner
+    result_image = cv2.addWeighted(map_area, 0.8, map_info, 1, 1)
+    cv2.imshow("Image", result_image)
+    '''
+    #minimap cropping box
+    ver_l = min(a,c)
+    ver_r = max(a,c)
+    result_image = cv2.resize(map_area[b:d,ver_l:ver_r], (252,252))
+    cv2.imshow("mini map", result_image)
+    #'''
+    frame_map = miniMap(a,b,c,d)
+    box_centre = frame_map.get_centre()
+    #print(box_centre)
     ##########
     #check if the map resized or moved to the other corner
     (a1,b1,c1,d1) = capture_map(cap,map_corner)
-    new_centre = [abs(a1-c1),abs(c1-d1)]
-    #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
-    if (abs(centre[0]-new_centre[0]) > 2) and (abs(centre[1]-new_centre[1]) > 2):
-        verd_hor_change_error = abs(centre[0]-new_centre[0])-abs(centre[1]-new_centre[1])
-        #if the verdical and horizontal change is about 45 degrees
-        #it means it is a legit resizing(instead of the influence of noise)
-        if verd_hor_change_error <= 3:
-            [a,b,c,d]=[a1,b1,c1,d1]
-    
-    frame_map = miniMap(a,b,c,d)
-    box_centre = frame_map.get_centre()
-    #check if the map location moved to the opposite corner
-    if (map_corner=='right')and(not((box_centre[0]>1180)and(box_centre[0]<1220)and(box_centre[1]>600))):
-        map_corner = 'left'
-    elif (map_corner=='left')and(not((box_centre[0]>70)and(box_centre[0]<100)and(box_centre[1]>600))):
-        map_corner = 'right'
+    new_centre = [int((a1+c1)/2),int((b1+d1)/2)]
+    print(new_centre)
+    dx = abs(box_centre[0]-new_centre[0])
+    dy = abs(box_centre[1]-new_centre[1])
+    if (map_corner=='right'):
+        if (new_centre[0]>1180)and(new_centre[0]<1220)and(box_centre[1]>600):
+        #image stabilization
+        #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
+            if ((dx > 3) and (dy > 3)):
+                [a,b,c,d]=[a1,b1,c1,d1]
+        else:
+            map_corner = 'left'
+            print('changed to left')
+            (a,b,c,d) = capture_map(cap,map_corner)
+
+    elif (map_corner=='left'):
+        if (new_centre[0]>70)and(new_centre[0]<100)and (new_centre[1]>600):
+            #image stabilization
+            #if the new centre is significantly away from the old one(2 pixels horizontal and verdical)
+                if ((dx > 3) and (dy > 3)):
+                    [a,b,c,d]=[a1,b1,c1,d1]
+        else:
+            map_corner = 'right'
+            print('changed to right')
+            (a,b,c,d) = capture_map(cap,map_corner) 
+
     #press q to exit the video window
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
